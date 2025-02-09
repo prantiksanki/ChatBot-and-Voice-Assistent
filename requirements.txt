@@ -1,0 +1,9 @@
+Flask
+Flask-CORS
+langchain-groq
+python-dotenv
+langchain-core
+SpeechRecognition
+gtts
+pygame
+pyaudio

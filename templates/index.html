@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disaster Response System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- <style>
+        .chat-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            transition: all 0.3s ease;
+        }
+    
+        .search-box {
+            background: transparent; /* Remove the background color */
+            border-radius: 24px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Add a shadow for floating effect */
+            transition: all 0.3s ease;
+        }
+    
+        .search-box.expanded {
+            border-radius: 12px;
+            height: 80vh;
+        }
+    
+        .chat-area {
+            height: calc(100% - 70px);
+            opacity: 0;
+            display: none;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+            margin: 0 1rem;
+            border-radius: 8px;
+        }
+    
+        .chat-area.visible {
+            opacity: 1;
+            display: block;
+        }
+    
+        .message {
+            max-width: 80%;
+            margin: 8px;
+            padding: 12px;
+            border-radius: 1rem;
+        }
+    
+        .user-message {
+            background-color: #3B82F6;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 0.25rem;
+        }
+    
+        .system-message {
+            background-color: #F3F4F6;
+            color: black;
+            margin-right: auto;
+            border-bottom-left-radius: 0.25rem;
+        }
+    
+        .mode-indicator {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #3B82F6;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 0.875rem;
+        }
+    </style> -->
+</head>
+<body class="bg-gray-100 flex justify-center items-center min-h-screen p-4">
+
+    <!-- Chat Container -->
+    <div class="w-full max-w-2xl bg-white shadow-lg rounded-lg overflow-hidden">
+        
+        <!-- Search Box -->
+        <div class="p-4 border-b bg-gray-100">
+            <div id="modeIndicator" class="hidden text-center bg-blue-500 text-white py-2 rounded-lg">
+                Voice Mode Active
+            </div>
+            <form id="messageForm" class="flex gap-4 items-center">
+                <input type="text" id="messageInput" 
+                       class="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       placeholder="Type your message...">
+                <button type="submit" 
+                        class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors">
+                    Send
+                </button>
+                <button type="button" id="voiceButton"
+                        class="bg-gray-200 p-3 rounded-full hover:bg-gray-300 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" 
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                </button>
+            </form>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="h-96 overflow-y-auto p-4 bg-gray-50" id="chatArea">
+            <div class="system-message bg-blue-100 text-blue-700 p-3 rounded-lg text-center">
+                Welcome! Please initialize the system with disaster type and language.
+            </div>
+            <div id="chatBox" class="space-y-3 mt-4"></div>
+        </div>
+    </div>
+
+    <script>
+        let isInitialized = false;
+        let isVoiceMode = false;
+        let isExpanded = false;
+
+        const searchBox = document.getElementById('searchBox');
+        const chatArea = document.getElementById('chatArea');
+        const chatBox = document.getElementById('chatBox');
+        const messageForm = document.getElementById('messageForm');
+        const messageInput = document.getElementById('messageInput');
+        const voiceButton = document.getElementById('voiceButton');
+        const modeIndicator = document.getElementById('modeIndicator');
+
+
+
+
+
+        //Input
+        
+
+
+
+
+
+
+
+
+
+        // Handle click outside
+        document.addEventListener('click', (e) => {
+            if (!searchBox.contains(e.target) && isExpanded) {
+                collapseChat();
+            }
+        });
+
+        // Handle click inside
+        messageInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!isExpanded) {
+                expandChat();
+            }
+        });
+
+        function expandChat() {
+            isExpanded = true;
+            searchBox.classList.add('expanded');
+            setTimeout(() => {
+                chatArea.classList.add('visible');
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, 300);
+        }
+
+        function collapseChat() {
+            isExpanded = false;
+            chatArea.classList.remove('visible');
+            setTimeout(() => {
+                searchBox.classList.remove('expanded');
+            }, 100);
+        }
+
+        // Initialize the application
+        async function initializeApp() {
+            const disaster_type = prompt("Enter the type of disaster (e.g., Earthquake, Flood, Fire):");
+            const lang_code = prompt("Enter language code (e.g., en-US, es-ES):");
+            
+            if (!disaster_type || !lang_code) {
+                addMessage("Initialization cancelled. Please refresh to try again.", "system");
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/initialize', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ disaster_type, lang_code })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    isInitialized = true;
+                    addMessage(data.message, "system");
+                } else {
+                    addMessage(`Error: ${data.error}, "system"`);
+                }
+            } catch (error) {
+                addMessage("Failed to initialize the application. Please try again.", "system");
+            }
+        }
+
+        // Add message to chat
+        function addMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            messageDiv.textContent = text;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // Handle message submission
+        async function handleSubmission(message, mode = 'chat') {
+            if (!isInitialized) {
+                addMessage("Please initialize the system first.", "system");
+                return;
+            }
+
+            addMessage(message, "user");
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message, mode })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    addMessage(data.response, "system");
+                } else {
+                    addMessage(`Error: ${data.error}, "system"`);
+                }
+            } catch (error) {
+                addMessage("Failed to process your request. Please try again.", "system");
+            }
+        }
+
+        // Handle voice input
+        async function startListening() {
+            if (!isInitialized) {
+                addMessage("Please initialize the system first.", "system");
+                return;
+            }
+
+            addMessage("Listening...", "system");
+            
+            try {
+                const response = await fetch('/api/listen', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    messageInput.value = data.text;
+                    handleSubmission(data.text, 'talk');
+                } else {
+                    addMessage(`Error: ${data.error}, "system"`);
+                }
+            } catch (error) {
+                addMessage("Failed to process voice input. Please try again.", "system");
+            }
+        }
+
+        // Event Listeners
+        messageForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            if (message) {
+                if (!isExpanded) {
+                    expandChat();
+                }
+                await handleSubmission(message, isVoiceMode ? 'talk' : 'chat');
+                messageInput.value = '';
+            }
+        });
+
+        voiceButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isVoiceMode = !isVoiceMode;
+            modeIndicator.classList.toggle('hidden');
+            if (isVoiceMode) {
+                if (!isExpanded) {
+                    expandChat();
+                }
+                startListening();
+            }
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
